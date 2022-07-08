@@ -1,7 +1,9 @@
+from arcade import has_line_of_sight
+from matplotlib.style import available
 import numpy as np
 import json
 
-import constants
+from src.constants import Player, char_mapper, Field, HASH_SIZE, WIN, LOSS, DRAW
 
 class TicTacGame:
     def __init__(self, n_levels):
@@ -11,7 +13,7 @@ class TicTacGame:
         self.board_width = 3 ** self.n_levels
         self.board_height = 3 ** self.n_levels
         self.__history = []
-        self.__turn = Player.CIRLCE
+        self.__turn = Player.CIRLCE.value
         self.__board = np.zeros((3 ** (self.n_levels), 3 ** (self.n_levels)), dtype=int)
         self.__board_str = None
         self.__term = False
@@ -21,13 +23,10 @@ class TicTacGame:
         self.__rewards = [None, None]
         
         for i in range(self.n_levels):
-            self.__tree.append(np.zeros((3 ** (i), 3 ** (i))), dtype=int)
+            self.__tree.append(np.zeros((3 ** (i), 3 ** (i)), dtype=int))
         self.__tree.append(self.__board)
-        
-        s = ''
-        for y in range(self.board_height):
-            for x in range(self.board_width):
-                s += char_mapper[y][x]
+
+        s = [char_mapper[Field.Empty.value] for _ in range(self.board_height * self.board_width)]
         self.__board_str = s
     
     def get_state(self,):
@@ -46,8 +45,7 @@ class TicTacGame:
         return self.__term
     
     def rewards(self,) -> list:
-        score = self.__result()
-        return score
+        return self.__rewards
     
     def make_move(self, move):
         
@@ -56,55 +54,80 @@ class TicTacGame:
         self.__board_str[y * self.board_height + x % self.board_width] = char_mapper[self.__turn]
         self.__history.append(move)
         
-        y_origin, x_origin = y // 3, x // 3
-        
         decisive = True
         level = self.n_levels
-        
-        while win and level > 0:
+        y_origin, x_origin = y // HASH_SIZE, x // HASH_SIZE
+        y_origin, x_origin = y_origin * HASH_SIZE, x_origin * HASH_SIZE  
+
+        while decisive and level > 0:
             decisive = False
-            y_origin, x_origin = y // 3 ** (level - 1), x // 3 ** (level - 1)
-            
+
             score = self.__hash_score(self.__turn, (y_origin, x_origin), level)
-            
+            y_origin //= 3
+            x_origin //= 3            
             if score is not None:
                 decisive = True
                 self.__tree[level - 1][y_origin, x_origin] = score
-            
+            y_origin //= 3
+            x_origin //= 3   
             level -= 1
+
             
-        if self.__tree[0][0,0] != Field.Empty:
+        if self.__tree[0][0,0] != Field.Empty.value:
             self.__term = True
             
-            if self.__tree[0][0,0] == Field.Cirlce:
-                self.__rewards[Field.Cirlce] = WIN
-                self.__rewards[Field.Cross] = LOST
+            if self.__tree[0][0,0] == Field.Cirlce.value:
+                self.__rewards[Field.Cirlce.value - 1] = WIN
+                self.__rewards[Field.Cross.value - 1] = LOSS
                 
-            elif self.__tree[0][0,0] == Field.Undecided:
-                self.__rewards[Field.Cirlce] = DRAW
-                self.__rewards[Field.Cross] = DRAW
+            elif self.__tree[0][0,0] == Field.Undecided.value:
+                self.__rewards[Field.Cirlce.value - 1] = DRAW
+                self.__rewards[Field.Cross.value - 1] = DRAW
             
             else:
-                self.__rewards[Field.Cirlce] = LOST
-                self.__rewards[Field.Cross] = WIN
+                self.__rewards[Field.Cirlce.value - 1] = LOSS
+                self.__rewards[Field.Cross.value - 1] = WIN
             
         
-        self.__turn = 1 - self.__turn
+        if self.__turn == Player.CIRLCE.value:
+            self.__turn = Player.CROSS.value
+        else:
+            self.__turn = Player.CIRLCE.value
     
     def undo_move(self,): 
         
         if len(self.__history) == 0:
             pass
+
+        y, x = self.__history.pop()
+        self.__board[y, x] = Field.Empty.value
+        self.__board_str[y * self.board_height + x % self.board_width] = char_mapper[Field.Empty.value]
         
-        self.__board[self.__history[-1]] = Field.Empty
-        self.__board_str[self.__history[-1]] =\
-                char_mapper[self.__board_str[self.__history[-1]]]
-        self.__history.pop()
-        self.__turn = 1 - self.__turn
+
+        y_origin, x_origin = y // HASH_SIZE, x // HASH_SIZE
+        level = self.n_levels - 1
+        
+        while level >= 0 and self.__tree[level][y_origin, x_origin] != Field.Empty.value:
+            self.__tree[level][y_origin, x_origin] = Field.Empty.value
+            level -= 1
+            y_origin //= HASH_SIZE
+            x_origin //= HASH_SIZE
+        
+        if self.__tree[0][0,0] == Field.Empty.value:
+            self.__rewards = (None, None)
+
+        if self.__turn == Player.CIRLCE.value:
+            self.__turn = Player.CROSS.value
+        else:
+            self.__turn = Player.CIRLCE.value
         
     def print_board(self,):
+        s = ''.join(self.__board_str)
         for i in range(self.board_height):
-            print(self.__board_str[i * self.board_height : (i + 1) * self.board_height])
+            if i == self.board_height - 1:
+                print(s[i * self.board_height :])
+                break
+            print(s[i * self.board_height : (i + 1) * self.board_height])
     
     def __print_comp(self,):
         pass
@@ -113,24 +136,58 @@ class TicTacGame:
         pass
     
     def __find_next_hash(self,):
-        y, x = self.__history[-1]
-        y_out = 0
-        x_out = 0
-        for i in range(n_levels):
-            y_out += ((y // (3 ** i)) % 3) * 3 ** (n_levels - 1 - i)
-            x_out += ((x // (3 ** i)) % 3) * 3 ** (n_levels - 1 - i)
+
+        if len(self.__history) == 0 or len(self.__tree) == 2:
+            return (None, None)
         
-        return [(y, x)]
+
+        y, x = self.__history[-1]
+        
+        y = y % HASH_SIZE
+        x = x % HASH_SIZE
+
+        if self.__tree[1][y, x] != Field.Empty.value:
+            return (None, None)
+
+        return (y, x)
     
+    def __dfs_tree(self, y, x, level, empty_fields_list):
+
+        if self.__tree[level][y, x] != Field.Empty.value:
+            return
+
+        if level == self.n_levels:
+            empty_fields_list.append((y, x))
+            return 
+        
+        for i in range(HASH_SIZE):
+            for j in range(HASH_SIZE):
+                self.__dfs_tree(3 * y + i, 3 * x + j, level + 1, empty_fields_list)
+
     def get_available_moves(self,) -> list:
         
         available_moves = []
         y_origin, x_origin = self.__find_next_hash()
-        
-        for i in range(HASH_SIZE):
-            for j in range(HASH_SIZE):
-                if self.__board[y_origin + i, x_origin + j] == Field.Empty:
-                    available_moves.append((y_origin + i, x_origin + j))
+
+        level = 1
+
+        if y_origin is None:
+            level = 0
+            y_origin, x_origin = 0, 0
+
+        if self.__term:
+            return []
+
+
+        if len(self.__tree) == 2:
+
+            for i in range(HASH_SIZE):
+                for j in range(HASH_SIZE):
+                    if self.__board[i,j] == Field.Empty.value:
+                        available_moves.append((i, j))
+            return available_moves 
+
+        self.__dfs_tree(y_origin, x_origin, level, available_moves)
                     
         return available_moves
     
@@ -143,18 +200,44 @@ class TicTacGame:
         board = self.__tree[level]
         
         for i in range(HASH_SIZE):
-            if board[y_origin + i, x_origin : x_origin + HASH_SIZE].all() == player:
+            if (board[y_origin + i, x_origin : x_origin + HASH_SIZE] == player).all():
                 return last_to_move  
-            if board[y_origin : y_origin + HASH_SIZE, x_origin + i].all() == player:
+            if (board[y_origin : y_origin + HASH_SIZE, x_origin + i] == player).all():
                 return last_to_move
             
-        if board[[(i, i) for i in range(HASH_SIZE)]].all() == player:
+        if (board[tuple([i for i in range(HASH_SIZE)]), tuple([i for i in range(HASH_SIZE)])] == player).all():
             return last_to_move
         
-        if board[[(i, HASH_SIZE - i) for i in range(HASH_SIZE)]].all() == player:
+        if (board[tuple([i for i in range(HASH_SIZE)]), tuple([HASH_SIZE - 1 - i for i in range(HASH_SIZE)])] == player).all():
             return last_to_move
         
-        if board.all() != Field.Empty:
-            return Undecided
+        if (board[y_origin : y_origin + HASH_SIZE, x_origin : x_origin + HASH_SIZE] != Field.Empty.value).all():
+            return Field.Undecided.value
         
         return None
+
+def main():
+    
+    game = TicTacGame(1)
+
+    moves = game.get_available_moves()
+    it = 0
+
+    while game.terminal() == False:
+        it += 1
+        moves = game.get_available_moves()
+        move = moves[np.random.randint(0, len(moves))]
+        game.make_move(move)
+
+    print(game.rewards())
+    game.print_board()
+
+    while it > 0:
+        it -= 1
+        game.undo_move()
+    
+    print(game.rewards())
+    game.print_board()
+
+if __name__ == "__main__":
+    main()

@@ -17,9 +17,9 @@ class Field(Enum):
     Undecided = 3
 
 char_mapper = {
-    0: ' ',
-    1: '0',
-    2: 'X'
+    Field.Empty.value: ' ',
+    Field.Cirlce.value: '0',
+    Field.Cross.value: 'X'
 }
 
 HASH_SIZE = 3
