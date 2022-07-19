@@ -1,3 +1,4 @@
+from copy import deepcopy
 from arcade import has_line_of_sight
 from matplotlib.style import available
 import numpy as np
@@ -29,11 +30,28 @@ class TicTacGame:
         s = [char_mapper[Field.Empty.value] for _ in range(self.board_height * self.board_width)]
         self.__board_str = s
     
+    def clone(self,):
+
+        out_game = TicTacGame(self.n_levels)
+        out_game.n_levels = self.n_levels
+        out_game.board_width = self.board_width
+        out_game.board_height = self.board_height
+        out_game.__history = deepcopy(self.__history)
+        out_game.__turn = self.__turn
+        out_game.__board = np.copy(self.__board)
+        out_game.__board_str = deepcopy(self.__board_str)
+        out_game.__term = self.__term
+        out_game.__tree = [np.copy(leaf) for leaf in self.__tree[:-1]]
+        out_game.__tree.append(out_game.__board)
+        out_game.__rewards = deepcopy(self.__rewards)
+
+        return out_game
+
     def get_state(self,):
-        str(hash(self.__board_str + str(self.__turn)))
+        return str(hash(''.join(self.__board_str) + str(self.__turn)))
     
     def get_hash_of_state(self,):
-        str(hash(self.__board_str + str(self.__turn)))
+        return str(hash(''.join(self.__board_str) + str(self.__turn)))
     
     def reset(self,):
         self.__init__(self.n_levels)
