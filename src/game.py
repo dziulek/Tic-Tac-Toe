@@ -1,5 +1,5 @@
 from copy import deepcopy
-from arcade import has_line_of_sight
+# from arcade import has_line_of_sight
 from matplotlib.style import available
 import numpy as np
 import json
@@ -81,13 +81,13 @@ class TicTacGame:
             decisive = False
 
             score = self.__hash_score(self.__turn, (y_origin, x_origin), level)
-            y_origin //= 3
-            x_origin //= 3            
+            y_origin //= HASH_SIZE
+            x_origin //= HASH_SIZE
             if score is not None:
                 decisive = True
                 self.__tree[level - 1][y_origin, x_origin] = score
-            y_origin //= 3
-            x_origin //= 3   
+            y_origin = (y_origin // HASH_SIZE) * HASH_SIZE
+            x_origin = (x_origin // HASH_SIZE) * HASH_SIZE
             level -= 1
 
             
