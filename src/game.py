@@ -9,7 +9,7 @@ from src.constants import Player, char_mapper, Field, HASH_SIZE, WIN, LOSS, DRAW
 class TicTacGame:
     def __init__(self, n_levels):
         super().__init__()
-        
+
         self.n_levels = n_levels
         self.board_width = 3 ** self.n_levels
         self.board_height = 3 ** self.n_levels
@@ -47,10 +47,10 @@ class TicTacGame:
 
         return out_game
 
-    def get_state(self,):
+    def get_state(self,):        
         return str(hash(''.join(self.__board_str) + str(self.__turn)))
     
-    def get_hash_of_state(self,):
+    def hash(self,):
         return str(hash(''.join(self.__board_str) + str(self.__turn)))
     
     def reset(self,):

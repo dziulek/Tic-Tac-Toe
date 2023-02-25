@@ -11,7 +11,7 @@
             "name": "Python: File",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "main.py",
             "justMyCode": true
         }
     ]

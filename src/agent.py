@@ -16,21 +16,21 @@ Node = namedtuple('Node', ['n_visits' ,'n_wins', 'ucb', 'turn', \
 
 class Node:
     def __init__(self, game: TicTacGame, parent: str) -> None:
-        self.n_wins = 0
-        self.n_visits = 0
-        self.ucb = 0
-        self.parent = parent
-        self.turn = game.get_turn()
-        self.ea = []
-        self.nea = game.get_available_moves()
+        self.n_wins = 0 # number of wins in the node
+        self.n_visits = 0 # number of visits in the node
+        self.ucb = 0 # Upper Confidence Bound - exploitation and exploration
+        self.parent = parent # parent in the tree
+        self.turn = game.get_turn() # which player to move
+        self.ea = [] # list of explored actions
+        self.nea = game.get_available_moves() # list of not explored actions
 
 class MCTSAgent:
     def __init__(self) -> None:
-        self.pi_t = {}
-        self.I = int(1e4)
-        self.Tree = {}
+        self.pi_t = {} # main policy
+        self.I = int(1e4) # Constant, indicates how many simulations to execute
+        self.Tree = {} # Structure of the searching tree
 
-        # C coefficient of UCB formula
+        # C coefficient of the UCB formula
         self.C = np.sqrt(2)
 
     def step(self, game: TicTacGame):
@@ -44,7 +44,7 @@ class MCTSAgent:
 
         start = time.time()
 
-        SS_h = game.get_hash_of_state() # hash of the starting state
+        SS_h = game.hash() # hash of the starting state
 
         self.root_node = Node(SS, None)
         
@@ -58,59 +58,46 @@ class MCTSAgent:
             
             curr_node = SS.clone()
 
-            while len(self.Tree[curr_node.get_hash_of_state()].ea) and \
-                len(self.Tree[curr_node.get_hash_of_state()].nea) == 0:
+            while len(self.Tree[curr_node.hash()].ea) and \
+                len(self.Tree[curr_node.hash()].nea) == 0:
 
-                N = self.Tree[curr_node.get_hash_of_state()].n_visits
+                N = self.Tree[curr_node.hash()].n_visits
                     
-                for action, state in self.Tree[curr_node.get_hash_of_state()].ea:
+                for action, state in self.Tree[curr_node.hash()].ea:
                     
                     n = self.Tree[state].n_visits
                     w = self.Tree[state].n_wins
-                    
-                    # if n > N:
-                    #     print('o')
 
                     self.Tree[state].ucb = w/n + self.C * np.sqrt(np.log(N)/n)                    
                 
-                best_idx = np.argmax([self.Tree[s].ucb for a, s in self.Tree[curr_node.get_hash_of_state()].ea])
+                best_idx = np.argmax([self.Tree[s].ucb for _, s in self.Tree[curr_node.hash()].ea])
                 
-                action, state = self.Tree[curr_node.get_hash_of_state()].ea[best_idx]
+                action, state = self.Tree[curr_node.hash()].ea[best_idx]
                 
-                self.pi_t[curr_node.get_hash_of_state()] = action
+                self.pi_t[curr_node.hash()] = action
                 
-                self.Tree[curr_node.get_hash_of_state()].n_visits += 1
-                curr_node.make_move(self.pi_t[curr_node.get_hash_of_state()])
+                self.Tree[curr_node.hash()].n_visits += 1
+                curr_node.make_move(self.pi_t[curr_node.hash()])
 
-            # if 'curr_node' is a terminal state then no more
-            # states remain to be explored
-
-                
-                # Sp is a state that has not visited actions
             Sp = curr_node.clone()
-            Sp_h = Sp.get_hash_of_state()
+            Sp_h = Sp.hash()
                 
             if curr_node.terminal() == False:
                 # choose random actions from state 'Sp'       
                 action = np.random.randint(0, len(self.Tree[Sp_h].nea))
                 move = self.Tree[Sp_h].nea[action]
                 Sp.make_move(move)
-                self.Tree[Sp_h].ea.append((move, Sp.get_hash_of_state()))
+                self.Tree[Sp_h].ea.append((move, Sp.hash()))
                 self.Tree[Sp_h].nea.pop(action)  
                         
-                Sp_h = Sp.get_hash_of_state()            
-            
-            # if Sp.terminal() and Sp_h == SS_h:
-            #     return move
-            
-
-            
+                Sp_h = Sp.hash()            
+   
             # new state that we add to the global tree
             Snew = Sp.clone()
             Snew_h = deepcopy(Sp_h)
         
             if Snew_h not in self.Tree.keys():
-                self.Tree[Snew_h] = Node(game=Snew, parent=curr_node.get_hash_of_state())
+                self.Tree[Snew_h] = Node(game=Snew, parent=curr_node.hash())
             self.Tree[Snew_h].n_visits += 1
             
             while Sp.terminal() is False:
@@ -122,36 +109,11 @@ class MCTSAgent:
             # backpropagate until visit starting state
             while Snew_h != SS_h:
 
-                self.Tree[Snew_h].n_wins += r[(self.Tree[Snew_h].turn) % 2]
-                
-                # N = self.Tree[self.Tree[Snew_h].parent]
-                # n = self.Tree[Snew_h].n_visits
-                # w = self.Tree[Snew_h].n_wins
+                self.Tree[Snew_h].n_wins += r[(self.Tree[Snew_h].turn) % 2]            
 
-                # self.Tree[Snew_h].ucb = w/n + self.C * np.sqrt(np.log(N)/n)
                 Snew_h = self.Tree[Snew_h].parent
-                
-                # best_idx = np.argmax([self.Tree[s[1]].ucb for s in self.Tree[Snew_h].ea])
-                
-                
-                
-                # self.pi_t[Snew_h] = self.Tree[Snew_h].ea[best_idx][0]
-                
-        tmp = [(s[0], self.Tree[s[1]].ucb, self.Tree[s[1]].n_visits, self.Tree[s[1]].n_wins, self.Tree[SS_h].n_visits) for s in self.Tree[SS_h].ea]
+
+                best_idx = np.argmax([self.Tree[s[1]].n_wins / self.Tree[s[1]].n_visits for s in self.Tree[Snew_h].ea])                
+                self.pi_t[Snew_h] = self.Tree[Snew_h].ea[best_idx][0]                  
         
         return self.pi_t[SS_h]
-
-
-def main():
-
-    game = TicTacGame(1)
-    
-    agent = MCTSAgent()
-
-    action = agent.step(game)
-
-    print(action)
-
-if __name__ == "__main__":
-
-    main()
