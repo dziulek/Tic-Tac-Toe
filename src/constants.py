@@ -1,4 +1,5 @@
 from enum import Enum
+from collections import namedtuple
 
 BOARD_SIZE = 9
 
@@ -25,3 +26,6 @@ char_mapper = {
 MAX_MOVE_TIME = 2
 
 HASH_SIZE = 3
+
+Node = namedtuple('Node', ['n_visits' ,'n_wins', 'ucb', 'turn', \
+    'parent', 'ea', 'nea'])

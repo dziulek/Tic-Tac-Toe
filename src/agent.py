@@ -5,11 +5,10 @@ import time
 
 import scipy as sp
 from src.game import TicTacGame
-from src.constants import MAX_MOVE_TIME
+from src.constants import MAX_MOVE_TIME, Node
 from copy import deepcopy
 
-Node = namedtuple('Node', ['n_visits' ,'n_wins', 'ucb', 'turn', \
-    'parent', 'ea', 'nea'])
+from src.utils import prune_tree
 
 # ea is abbreviation from 'Explored Actions'
 # nea is abbreviation from 'Not Explored Actions'
@@ -35,12 +34,13 @@ class MCTSAgent:
 
     def step(self, game: TicTacGame):
 
-        # temporarily without any memory
-        self.Tree = {}
         self.pi_t = {} # tree policy
         self.pi_r = {} # rollout policy
 
         SS = game.clone() # starting state
+
+        # use existing evaluations to speed up the search procedure
+        self.Tree = prune_tree(self.Tree, SS)
 
         start = time.time()
 
