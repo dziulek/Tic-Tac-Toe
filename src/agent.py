@@ -40,7 +40,8 @@ class MCTSAgent:
         SS = game.clone() # starting state
 
         # use existing evaluations to speed up the search procedure
-        self.Tree = prune_tree(self.Tree, SS)
+        # self.Tree = prune_tree(self.Tree, SS)
+        self.Tree = {}
 
         start = time.time()
 

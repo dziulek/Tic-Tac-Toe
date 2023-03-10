@@ -138,14 +138,66 @@ class TicTacGame:
             self.__turn = Player.CROSS.value
         else:
             self.__turn = Player.CIRLCE.value
+
+    def __assemble_str_repr(self, level_borders, input_arr, level, x, y) -> np.ndarray:
+        if level == self.n_levels:
+            return np.array([[input_arr[y][x]]])
+
+        bar_len = 2 * 3 ** (self.n_levels - 1 - level) - 1
+        b, r, c = level_borders[self.n_levels - 1 - level]
+
+        if self.n_levels - 1 - level == 0:
+            cross = np.array([[c]], dtype=np.uint8)
+            bar = np.ones((bar_len, 1), dtype=np.uint8) * b
+            row = np.ones((1, bar_len), dtype=np.uint8) * r
+        else:
+
+            cross = np.zeros((3,3), dtype=np.uint8)
+            cross[1,:] = c
+            cross[:,1] = c
+            bar = np.zeros((bar_len, 3), dtype=np.uint8)
+            row = np.zeros((3, bar_len), dtype=np.uint8)
+            bar[:,1] = b
+            row[1, :] = r
+        row = np.concatenate([row, cross, row, cross, row], axis=1)
+        tmp = []
+        for i in range(3):
+            tmp.append([])        
+            for j in range(3):
+                tmp[-1].append(self.__assemble_str_repr(level_borders, input_arr, \
+                        level + 1, 3 * x + j, 3 * y + i))
         
-    def print_board(self,):
-        s = ''.join(self.__board_str)
-        for i in range(self.board_height):
-            if i == self.board_height - 1:
-                print(s[i * self.board_height :])
-                break
-            print(s[i * self.board_height : (i + 1) * self.board_height])
+            tmp[-1] = np.concatenate([tmp[-1][0], bar, tmp[-1][1], bar, tmp[-1][2]], axis=1)
+
+        tmp = np.concatenate([tmp[0], row, tmp[1], row, tmp[2]], axis=0)
+
+        return tmp
+        
+        
+    def __str__(self,) -> str:
+
+        char_array = self.__board.copy()
+
+        level_borders = [
+            [ord('|'), ord('-'), ord('+')],
+            [ord('@'), ord('@'), ord('@')],            
+            [ord('#'), ord('#'), ord('#')],
+            [ord('$'), ord('$'), ord('$')],
+        ]
+
+        ass_arr = self.__assemble_str_repr(level_borders, self.__board.copy(), 0, 0, 0)
+        l_chars = []
+        for i in range(ass_arr.shape[0]):
+            for j in range(ass_arr.shape[1]):
+                if ass_arr[i][j] < 4:
+                    l_chars.append(char_mapper[ass_arr[i][j]])
+                else:
+                    l_chars.append(chr(ass_arr[i][j]))
+
+            l_chars.append('\n')
+
+        return ''.join(l_chars)
+        
     
     def __print_comp(self,):
         pass
