@@ -19,7 +19,7 @@ class Field(Enum):
 
 char_mapper = {
     Field.Empty.value: ' ',
-    Field.Cirlce.value: '0',
+    Field.Cirlce.value: 'O',
     Field.Cross.value: 'X'
 }
 

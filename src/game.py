@@ -139,37 +139,55 @@ class TicTacGame:
         else:
             self.__turn = Player.CIRLCE.value
 
+    def __calculate_bar_len(self, level):
+        
+        if level == self.n_levels - 1:
+            return 1
+        if level == self.n_levels - 2:
+            return 5
+        
+        return 3 * self.__calculate_bar_len(level + 1) + 2 * (1 + 2 * (self.n_levels - 2 - level))
+
     def __assemble_str_repr(self, level_borders, input_arr, level, x, y) -> np.ndarray:
         if level == self.n_levels:
             return np.array([[input_arr[y][x]]])
 
-        bar_len = 2 * 3 ** (self.n_levels - 1 - level) - 1
+        bar_len = self.__calculate_bar_len(level)
+
         b, r, c = level_borders[self.n_levels - 1 - level]
 
-        if self.n_levels - 1 - level == 0:
+        if level == self.n_levels - 1:
             cross = np.array([[c]], dtype=np.uint8)
             bar = np.ones((bar_len, 1), dtype=np.uint8) * b
             row = np.ones((1, bar_len), dtype=np.uint8) * r
         else:
+            sep_width = 2* (self.n_levels - level - 1) + 1
+            mid = sep_width//2
+            cross = np.zeros((sep_width, sep_width), dtype=np.uint8)
+            cross[mid,:] = c
+            cross[:,mid] = c
+            bar = np.zeros((bar_len, sep_width), dtype=np.uint8)
+            row = np.zeros((sep_width, bar_len), dtype=np.uint8)
+            bar[:,mid] = b
+            row[mid, :] = r
+        row = np.concatenate([row, cross, row, cross, row], axis=1)    
 
-            cross = np.zeros((3,3), dtype=np.uint8)
-            cross[1,:] = c
-            cross[:,1] = c
-            bar = np.zeros((bar_len, 3), dtype=np.uint8)
-            row = np.zeros((3, bar_len), dtype=np.uint8)
-            bar[:,1] = b
-            row[1, :] = r
-        row = np.concatenate([row, cross, row, cross, row], axis=1)
         tmp = []
         for i in range(3):
             tmp.append([])        
             for j in range(3):
                 tmp[-1].append(self.__assemble_str_repr(level_borders, input_arr, \
-                        level + 1, 3 * x + j, 3 * y + i))
-        
+                        level + 1, 3 * x + j, 3 * y + i))    
+
             tmp[-1] = np.concatenate([tmp[-1][0], bar, tmp[-1][1], bar, tmp[-1][2]], axis=1)
 
         tmp = np.concatenate([tmp[0], row, tmp[1], row, tmp[2]], axis=0)
+
+        if level != 0:
+            if self.__tree[level][y][x] == Field.Cirlce.value:
+                tmp[:,:] = Field.Cirlce.value
+            elif self.__tree[level][y][x] == Field.Cross.value:
+                tmp[:,:] = Field.Cross.value
 
         return tmp
         
@@ -184,7 +202,7 @@ class TicTacGame:
             [ord('#'), ord('#'), ord('#')],
             [ord('$'), ord('$'), ord('$')],
         ]
-
+        
         ass_arr = self.__assemble_str_repr(level_borders, self.__board.copy(), 0, 0, 0)
         l_chars = []
         for i in range(ass_arr.shape[0]):
