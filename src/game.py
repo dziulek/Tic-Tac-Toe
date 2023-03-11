@@ -3,8 +3,101 @@ from copy import deepcopy
 from matplotlib.style import available
 import numpy as np
 import json
+from typing import Dict, List
+
 
 from src.constants import Player, char_mapper, Field, HASH_SIZE, WIN, LOSS, DRAW
+
+def draw_circle_or_cross(input_arr: np.ndarray, _type: Field, out_char: str, in_char: str) -> np.ndarray:
+    
+    y, x = 1, 1
+    
+    out = input_arr.copy()
+    
+    out_int = ord(out_char)
+    in_int = ord(in_char)
+    
+    mid_x = input_arr.shape[1] / 2
+    mid_y = input_arr.shape[0] / 2
+    
+    h, w = input_arr.shape
+    
+    if _type == Field.Circle.value:
+        
+        out_rad = np.max([h * x, w * y]) / 2
+        in_rad = np.max([0, out_rad - 1])
+        
+        for i in range(input_arr.shape[0]):
+            for j in range(input_arr.shape[1]):
+                r = np.sqrt((i + 0.5 - mid_y) ** 2 + (j + 0.5 - mid_x) ** 2)
+                if in_rad <= r <= out_rad:
+                    out[i][j] = in_int
+                else:
+                    out[i][j] = out_int
+               
+        return out
+    
+    width = 0.5
+    
+    md_a = (h * x) / (w * y)
+    md_up = -width
+    md_down = width
+    
+    sd_a = -md_a
+    sd_up = h - width
+    sd_down = h + width
+    
+    for i in range(input_arr.shape[0]):
+        for j in range(input_arr.shape[1]):
+            _y = i + 0.5
+            _x = j + 0.5
+            if _x * md_a + md_up <= _y and _x * md_a + md_down >= _y:
+                out[i][j] = in_int
+            elif _x * sd_a + sd_up <= _y and _x * sd_a + sd_down >= _y:
+                out[i][j] = in_int
+            else:
+                out[i][j] = out_int
+                
+    return out
+    
+
+def merge_to_cross(chars: List[int], arr: List[List[np.ndarray]], sep_width: int) -> np.ndarray:
+    
+    b, r, c = chars
+    
+    bar_len = arr[0][0].shape[0]
+    row_len = arr[0][0].shape[1]
+    mid = sep_width // 2
+    
+    bar = np.zeros((bar_len, sep_width), dtype=np.uint8)
+    bar[:, mid] = b
+    row = np.zeros((sep_width, row_len), dtype=np.uint8)
+    row[mid, :] = r
+    cross = np.zeros((sep_width, sep_width), dtype=np.uint8)
+    cross[:, mid] = c
+    cross[mid, :] = c    
+    
+    tmp = []
+    for i in range(len(arr[0])):
+        tmp.append(row)
+        tmp.append(cross)
+    tmp.pop()
+    row = np.concatenate(tmp, axis=1)
+    
+    tmp = []
+    for i in range(len(arr)):
+        tmp.append([])
+        for j in range(len(arr[0])):
+            tmp[-1].append(arr[i][j])
+            tmp[-1].append(bar)
+        tmp[-1].pop()
+        tmp[-1] = np.concatenate(tmp[-1], axis=1)
+        
+        tmp.append(row)
+        
+    tmp.pop()
+        
+    return np.concatenate(tmp, axis=0)
 
 class TicTacGame:
     def __init__(self, n_levels):
@@ -14,7 +107,7 @@ class TicTacGame:
         self.board_width = 3 ** self.n_levels
         self.board_height = 3 ** self.n_levels
         self.__history = []
-        self.__turn = Player.CIRLCE.value
+        self.__turn = Player.CIRCLE.value
         self.__board = np.zeros((3 ** (self.n_levels), 3 ** (self.n_levels)), dtype=int)
         self.__board_str = None
         self.__term = False
@@ -94,23 +187,23 @@ class TicTacGame:
         if self.__tree[0][0,0] != Field.Empty.value:
             self.__term = True
             
-            if self.__tree[0][0,0] == Field.Cirlce.value:
-                self.__rewards[Field.Cirlce.value - 1] = WIN
+            if self.__tree[0][0,0] == Field.Circle.value:
+                self.__rewards[Field.Circle.value - 1] = WIN
                 self.__rewards[Field.Cross.value - 1] = LOSS
                 
             elif self.__tree[0][0,0] == Field.Undecided.value:
-                self.__rewards[Field.Cirlce.value - 1] = DRAW
+                self.__rewards[Field.Circle.value - 1] = DRAW
                 self.__rewards[Field.Cross.value - 1] = DRAW
             
             else:
-                self.__rewards[Field.Cirlce.value - 1] = LOSS
+                self.__rewards[Field.Circle.value - 1] = LOSS
                 self.__rewards[Field.Cross.value - 1] = WIN
             
         
-        if self.__turn == Player.CIRLCE.value:
+        if self.__turn == Player.CIRCLE.value:
             self.__turn = Player.CROSS.value
         else:
-            self.__turn = Player.CIRLCE.value
+            self.__turn = Player.CIRCLE.value
     
     def undo_move(self,): 
         
@@ -134,43 +227,14 @@ class TicTacGame:
         if self.__tree[0][0,0] == Field.Empty.value:
             self.__rewards = (None, None)
 
-        if self.__turn == Player.CIRLCE.value:
+        if self.__turn == Player.CIRCLE.value:
             self.__turn = Player.CROSS.value
         else:
-            self.__turn = Player.CIRLCE.value
-
-    def __calculate_bar_len(self, level):
-        
-        if level == self.n_levels - 1:
-            return 1
-        if level == self.n_levels - 2:
-            return 5
-        
-        return 3 * self.__calculate_bar_len(level + 1) + 2 * (1 + 2 * (self.n_levels - 2 - level))
+            self.__turn = Player.CIRCLE.value
 
     def __assemble_str_repr(self, level_borders, input_arr, level, x, y) -> np.ndarray:
         if level == self.n_levels:
-            return np.array([[input_arr[y][x]]])
-
-        bar_len = self.__calculate_bar_len(level)
-
-        b, r, c = level_borders[self.n_levels - 1 - level]
-
-        if level == self.n_levels - 1:
-            cross = np.array([[c]], dtype=np.uint8)
-            bar = np.ones((bar_len, 1), dtype=np.uint8) * b
-            row = np.ones((1, bar_len), dtype=np.uint8) * r
-        else:
-            sep_width = 2* (self.n_levels - level - 1) + 1
-            mid = sep_width//2
-            cross = np.zeros((sep_width, sep_width), dtype=np.uint8)
-            cross[mid,:] = c
-            cross[:,mid] = c
-            bar = np.zeros((bar_len, sep_width), dtype=np.uint8)
-            row = np.zeros((sep_width, bar_len), dtype=np.uint8)
-            bar[:,mid] = b
-            row[mid, :] = r
-        row = np.concatenate([row, cross, row, cross, row], axis=1)    
+            return np.array([[Field.Empty.value, input_arr[y][x], Field.Empty.value]])
 
         tmp = []
         for i in range(3):
@@ -179,15 +243,13 @@ class TicTacGame:
                 tmp[-1].append(self.__assemble_str_repr(level_borders, input_arr, \
                         level + 1, 3 * x + j, 3 * y + i))    
 
-            tmp[-1] = np.concatenate([tmp[-1][0], bar, tmp[-1][1], bar, tmp[-1][2]], axis=1)
-
-        tmp = np.concatenate([tmp[0], row, tmp[1], row, tmp[2]], axis=0)
+        tmp = merge_to_cross(level_borders[self.n_levels - 1 - level], tmp, 2 * (self.n_levels - level - 1) + 1)
 
         if level != 0:
-            if self.__tree[level][y][x] == Field.Cirlce.value:
-                tmp[:,:] = Field.Cirlce.value
+            if self.__tree[level][y][x] == Field.Circle.value:
+                tmp = draw_circle_or_cross(tmp, Field.Circle.value, ' ', '@')
             elif self.__tree[level][y][x] == Field.Cross.value:
-                tmp[:,:] = Field.Cross.value
+                tmp = draw_circle_or_cross(tmp, Field.Cross.value, ' ', '@')
 
         return tmp
         
@@ -265,7 +327,6 @@ class TicTacGame:
 
         if self.__term:
             return []
-
 
         if len(self.__tree) == 2:
 
