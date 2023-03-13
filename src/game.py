@@ -24,13 +24,16 @@ def draw_circle_or_cross(input_arr: np.ndarray, _type: Field, out_char: str, in_
     
     if _type == Field.Circle.value:
         
-        out_rad = np.min([h * x, w * y]) / 2
-        in_rad = np.max([0, out_rad - 1.3])
+        out_rad_a = w / 2
+        out_rad_b = h / 2
+        in_rad_a = np.max([0, out_rad_a - 1.3])
+        in_rad_b = np.max([0, out_rad_b - 1.3])
         
         for i in range(input_arr.shape[0]):
             for j in range(input_arr.shape[1]):
-                r = np.sqrt((i + 0.5 - mid_y) ** 2 + (j + 0.5 - mid_x) ** 2)
-                if in_rad <= r <= out_rad:
+                ab_out = np.sqrt(((i + 0.5 - mid_y) * out_rad_a) ** 2 + ((j + 0.5 - mid_x) * out_rad_b) ** 2)
+                ab_in = np.sqrt(((i + 0.5 - mid_y) * in_rad_a) ** 2 + ((j + 0.5 - mid_x) * in_rad_b) ** 2)
+                if ab_out <= out_rad_a * out_rad_b and ab_in >= in_rad_b * in_rad_a:
                     out[i][j] = in_int
                 else:
                     out[i][j] = out_int
@@ -260,8 +263,8 @@ class TicTacGame:
 
         level_borders = [
             [ord('|'), ord('-'), ord('+')],
-            [ord('@'), ord('@'), ord('@')],            
-            [ord('#'), ord('#'), ord('#')],
+            [ord('&'), ord('&'), ord('&')],            
+            [ord('#'), ord('#'), ord('&')],
             [ord('$'), ord('$'), ord('$')],
         ]
         
