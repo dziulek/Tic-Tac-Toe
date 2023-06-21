@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import sys
 
-from src.game import TicTacGame
+from ..src.game import TicTacGame
 
 class makeMoveTest(unittest.TestCase):
 

@@ -3,7 +3,7 @@ from src.game import TicTacGame
 
 def main():
     
-    game = TicTacGame(2)
+    game = TicTacGame(1)
     
     agent_cirlce = MCTSAgent()
     agent_cross = MCTSAgent()

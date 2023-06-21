@@ -23,7 +23,7 @@ char_mapper = {
     Field.Cross.value: 'X'
 }
 
-MAX_MOVE_TIME = 1
+MAX_MOVE_TIME = 3
 
 HASH_SIZE = 3
 
