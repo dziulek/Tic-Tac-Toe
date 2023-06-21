@@ -348,7 +348,7 @@ class TicTacGame:
         y_origin, x_origin = origin
         
         player = last_to_move
-        
+            
         board = self.__tree[level]
         
         for i in range(HASH_SIZE):
