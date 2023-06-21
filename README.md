@@ -23,6 +23,7 @@ i.e. each nested `#`
 can contain another `#` etc. For that reason, I called the game Fractal Tic-Tac-Toe.
 
 Feel free to play MCTS agent on as many levels as you wish. Below you can see part of a match between two MCTS players.
+
 ![Part of the game between MCTS players on a board with 2 levels](fractal-tic-tac-toe.gif)
 
 An example of a board state in three levels game.
