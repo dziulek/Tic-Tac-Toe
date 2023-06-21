@@ -126,6 +126,14 @@ class TicTacGame:
         s = [char_mapper[Field.Empty.value] for _ in range(self.board_height * self.board_width)]
         self.__board_str = s
     
+    @property
+    def board(self):
+        return self.__board
+
+    @property
+    def tree(self):
+        return self.__tree
+
     def clone(self,):
 
         out_game = TicTacGame(self.n_levels)
@@ -349,12 +357,12 @@ class TicTacGame:
         
         player = last_to_move
             
-        board = self.__tree[level]
+        board = self.__tree[level][y_origin : y_origin + HASH_SIZE, x_origin : x_origin + HASH_SIZE]
         
         for i in range(HASH_SIZE):
-            if (board[y_origin + i, x_origin : x_origin + HASH_SIZE] == player).all():
-                return last_to_move  
-            if (board[y_origin : y_origin + HASH_SIZE, x_origin + i] == player).all():
+            if (board[i,:] == player).all():
+                return last_to_move
+            if (board[:, i] == player).all():
                 return last_to_move
             
         if (board[tuple([i for i in range(HASH_SIZE)]), tuple([i for i in range(HASH_SIZE)])] == player).all():
@@ -363,7 +371,7 @@ class TicTacGame:
         if (board[tuple([i for i in range(HASH_SIZE)]), tuple([HASH_SIZE - 1 - i for i in range(HASH_SIZE)])] == player).all():
             return last_to_move
         
-        if (board[y_origin : y_origin + HASH_SIZE, x_origin : x_origin + HASH_SIZE] != Field.Empty.value).all():
+        if (board != Field.Empty.value).all():
             return Field.Undecided.value
         
         return None

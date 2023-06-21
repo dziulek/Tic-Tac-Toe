@@ -4,9 +4,9 @@ from src.console_agent import ConsoleAgent
 
 def main():
     
-    game = TicTacGame(1)
+    game = TicTacGame(2)
     
-    agent_cirlce = ConsoleAgent()
+    agent_cirlce = MCTSAgent()
     agent_cross = MCTSAgent()
     
     it = 0
@@ -17,7 +17,7 @@ def main():
             action = agent_cirlce.step(game)
         else:
             action = agent_cross.step(game)
-        
+
         game.make_move(action)
         print(game)
         it += 1
