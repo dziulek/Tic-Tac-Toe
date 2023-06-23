@@ -9,7 +9,7 @@ Rules for making a move are following:
 2. Choice of nested `#` by the player is enforced by the last opponent move in a such way:
 
     ```
-    A player must draw sign inside the nested # which is located the same cell in an outer #, 
+    A player must draw character inside the nested # which is located in the same cell in an outer #, 
     than the cell which was marked by the opponent in the previous move in a nested #. 
     For example, if the last move was made inside outer cell NORTH-WEST, and SOUTH-EAST 
     in inner cell then the next move have to be made inside SOUTH-EAST outer cell.
